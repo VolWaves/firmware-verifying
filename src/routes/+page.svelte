@@ -11,7 +11,10 @@
 		const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 		await delay(3000);
 		const reader = new FileReader();
-		let fileBuffer = reader.readAsArrayBuffer(file);
+		console.log('file', file);
+		reader.readAsArrayBuffer(file);
+		let fileBuffer = reader.result;
+		console.log('fileBuffer', fileBuffer);
 		const hex = sha1(fileBuffer);
 		isCalc = false;
 		return hex;
@@ -21,7 +24,6 @@
 		const file = e.dataTransfer ? e.dataTransfer.files[0] : e.target.files[0];
 		fileName = file ? file.name : 'Invalid file';
 		selectFile = file;
-		console.log(file);
 		sha1Value = getSHA1(file);
 	};
 	const onDrop = (e) => {
@@ -46,12 +48,8 @@
 />
 
 {#if selectFile}
-	<p>
-		Name: {selectFile.name}
-	</p>
-	<p>
-		Size: {selectFile.size} Bytes
-	</p>
+	<p>Name: {selectFile.name}</p>
+	<p>Size: {selectFile.size} Bytes</p>
 {/if}
 
 {#await sha1Value}
