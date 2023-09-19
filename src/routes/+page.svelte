@@ -1,7 +1,9 @@
 <script>
 	import { FileDropzone } from '@skeletonlabs/skeleton';
 
+	// @ts-ignore
 	import CryptoJS from 'crypto-js';
+	// @ts-ignore
 	import sha1 from 'crypto-js/sha1';
 
 	import dayjs from 'dayjs';
@@ -18,6 +20,7 @@
 	let warning = '';
 	let isLoading = false;
 	let filenameParse = Object({ valid: false });
+	// @ts-ignore
 	function getSHA1(file) {
 		isLoading = true;
 		const reader = new FileReader();
@@ -34,6 +37,7 @@
 		isLoading = false;
 		return '';
 	}
+	// @ts-ignore
 	const onChange = (e) => {
 		firmwareFile.valid = false;
 		filenameParse.valid = false;
@@ -54,10 +58,10 @@
 		firmwareFile = file;
 		firmwareFile.valid = true;
 		fileTitle = firmwareFile.name;
-		firmwareInfo = [{ name: '文件名', value: firmwareFile.name, valid: true }];
+		firmwareInfo = [{ name: '文件名', value: firmwareFile.name, exist: true, valid: true }];
 		firmwareInfo = [
 			...firmwareInfo,
-			{ name: '大小', value: firmwareFile.size + ' Bytes', valid: true }
+			{ name: '大小', value: firmwareFile.size + ' Bytes', exist: true, valid: true }
 		];
 		// 解析文件名
 		const patt =
@@ -81,7 +85,10 @@
 				'YYYYMMDD',
 				true
 			).isValid();
-			firmwareInfo = [...firmwareInfo, { name: '项目', value: filenameParse.name, valid: true }];
+			firmwareInfo = [
+				...firmwareInfo,
+				{ name: '项目', value: filenameParse.name, exist: true, valid: true }
+			];
 			firmwareInfo = [
 				...firmwareInfo,
 				{
@@ -91,21 +98,29 @@
 						{ name: '月', value: filenameParse.month },
 						{ name: '日', value: filenameParse.day }
 					],
+					exist: true,
 					valid: true
 				}
 			];
-			firmwareInfo = [...firmwareInfo, { name: '编译序号', value: filenameParse.ver, valid: true }];
+			firmwareInfo = [
+				...firmwareInfo,
+				{ name: '编译序号', value: filenameParse.ver, exist: true, valid: true }
+			];
 			if (filenameParse.crc) {
 				firmwareInfo = [
 					...firmwareInfo,
-					{ name: '烧录器校验码', value: filenameParse.crc, valid: true }
+					{ name: '烧录器校验码', value: filenameParse.crc, exist: true, valid: true }
 				];
 			}
-			firmwareInfo = [...firmwareInfo, { name: '备注', value: filenameParse.info, valid: true }];
+			firmwareInfo = [
+				...firmwareInfo,
+				{ name: '备注', value: filenameParse.info, exist: true, valid: true }
+			];
 		}
 		// 若文件名不符合规范，则只进行sha-1计算
 		sha1Value = getSHA1(firmwareFile);
 	};
+	// @ts-ignore
 	const onDrop = (e) => {
 		if (isLoading) {
 			return;
@@ -114,8 +129,21 @@
 	};
 </script>
 
-<FileDropzone name="files" regionInterfaceText="test" on:drop={onDrop} on:change={onChange}>
-	<svelte:fragment slot="message">点击选择固件<br />或者<br />直接拖入固件</svelte:fragment>
-	<svelte:fragment slot="meta">.hex .tenx .bin .zip</svelte:fragment>
-</FileDropzone>
-<FirmwareInfo {firmwareInfo} {warning} {sha1Value} />
+<div class="flex flex-col justify-center items-center mt-8">
+	{#if sha1Value == ''}
+		<FileDropzone
+			class="w-9/12 min-w-fit max-w-2xl bg-white/20 dragover:bg-red/20 text-slate-100"
+			name="files"
+			regionInterfaceText="test"
+			slotMeta="opacity-50"
+			on:drop={onDrop}
+			on:change={onChange}
+		>
+			<svelte:fragment slot="message">点击选择固件<br />或者<br />直接拖入固件</svelte:fragment>
+			<svelte:fragment slot="meta">.hex .tenx .bin</svelte:fragment>
+		</FileDropzone>
+	{/if}
+	<div class="w-9/12 min-w-fit max-w-2xl">
+		<FirmwareInfo {firmwareInfo} {warning} {sha1Value} />
+	</div>
+</div>
