@@ -1,4 +1,4 @@
-
+<!-- 
 <script>
 	import { useRegisterSW } from 'virtual:pwa-register/svelte';
 	import { slide } from 'svelte/transition';
@@ -41,4 +41,4 @@
 		{/if}
 		<button class="button m-0" on:click={close}> Close </button>
 	</div>
-{/if}
+{/if} -->

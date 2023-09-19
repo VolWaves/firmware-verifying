@@ -1,59 +1,121 @@
 <script>
-	import Variables from 'svelte-atoms/Variables.svelte';
-	import DropZone from 'svelte-atoms/DropZone.svelte';
+	import { FileDropzone } from '@skeletonlabs/skeleton';
+
+	import CryptoJS from 'crypto-js';
 	import sha1 from 'crypto-js/sha1';
-	let sha1Value;
-	let selectFile;
-	let fileName = '';
-	let isCalc = false;
-	async function getSHA1(file) {
-		isCalc = true;
-		const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-		await delay(3000);
+
+	import dayjs from 'dayjs';
+	import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+	import FirmwareInfo from './info.svelte';
+	dayjs.extend(customParseFormat);
+	let sha1Value = '';
+	let firmwareFile = Object({ valid: false });
+	let firmwareInfo = Array();
+	let firmwareDateValid = false;
+	let fileTitle = '';
+	let fileError = '';
+	let warning = '';
+	let isLoading = false;
+	let filenameParse = Object({ valid: false });
+	function getSHA1(file) {
+		isLoading = true;
 		const reader = new FileReader();
 		console.log('file', file);
-		reader.readAsArrayBuffer(file);
-		let fileBuffer = reader.result;
-		console.log('fileBuffer', fileBuffer);
-		const hex = sha1(fileBuffer);
-		isCalc = false;
-		return hex;
+		console.log('readAsArrayBuffer', reader.readAsArrayBuffer(file));
+		reader.onload = function () {
+			console.log(reader.result);
+			let hex = sha1(CryptoJS.lib.WordArray.create(reader.result)).toString();
+			console.log('hex', hex);
+		};
+		reader.onerror = function () {
+			console.log(reader.error);
+		};
+		isLoading = false;
+		return '';
 	}
 	const onChange = (e) => {
+		firmwareFile.valid = false;
+		filenameParse.valid = false;
+		fileError = '';
+		sha1Value = '';
 		console.log('onChange', e);
 		const file = e.dataTransfer ? e.dataTransfer.files[0] : e.target.files[0];
-		fileName = file ? file.name : 'Invalid file';
-		selectFile = file;
-		sha1Value = getSHA1(file);
+		if (file == null) {
+			fileTitle = '无效输入';
+			fileError = '无效文件';
+			return;
+		}
+		if (file.size > 16777216) {
+			fileTitle = '无效输入';
+			fileError = '文件体积过大';
+			return;
+		}
+		firmwareFile = file;
+		firmwareFile.valid = true;
+		fileTitle = firmwareFile.name;
+		firmwareInfo = [{ name: '文件名', value: firmwareFile.name, valid: true }];
+		firmwareInfo = [
+			...firmwareInfo,
+			{ name: '大小', value: firmwareFile.size + ' Bytes', valid: true }
+		];
+		// 解析文件名
+		const patt =
+			/^(\w+)-(\d{2})(\d{2})(\d{2})(\d{2})-\[([a-f0-9]{6})\]-(?:\{([a-f0-9]{4})\}-?)?([^\.]*)/i;
+		let match = fileTitle.match(patt);
+		if (match == null) {
+			warning = '文件名不符合Volwave固件规范，仅计算SHA-1校验和';
+		} else {
+			warning = '';
+			filenameParse.name = match[1];
+			filenameParse.year = '20' + match[2];
+			filenameParse.month = match[3];
+			filenameParse.day = match[4];
+			filenameParse.ver = match[5];
+			filenameParse.sha1 = match[6];
+			filenameParse.crc = match[7];
+			filenameParse.info = match[8];
+			filenameParse.valid = true;
+			firmwareDateValid = dayjs(
+				filenameParse.year + filenameParse.month + filenameParse.day,
+				'YYYYMMDD',
+				true
+			).isValid();
+			firmwareInfo = [...firmwareInfo, { name: '项目', value: filenameParse.name, valid: true }];
+			firmwareInfo = [
+				...firmwareInfo,
+				{
+					name: '日期',
+					value: [
+						{ name: '年', value: filenameParse.year },
+						{ name: '月', value: filenameParse.month },
+						{ name: '日', value: filenameParse.day }
+					],
+					valid: true
+				}
+			];
+			firmwareInfo = [...firmwareInfo, { name: '编译序号', value: filenameParse.ver, valid: true }];
+			if (filenameParse.crc) {
+				firmwareInfo = [
+					...firmwareInfo,
+					{ name: '烧录器校验码', value: filenameParse.crc, valid: true }
+				];
+			}
+			firmwareInfo = [...firmwareInfo, { name: '备注', value: filenameParse.info, valid: true }];
+		}
+		// 若文件名不符合规范，则只进行sha-1计算
+		sha1Value = getSHA1(firmwareFile);
 	};
 	const onDrop = (e) => {
+		if (isLoading) {
+			return;
+		}
 		onChange(e);
 	};
 </script>
 
-<h1>VFVT</h1>
-<h2>沃尔微固件校验工具</h2>
-<h2>Volwave Firmware Verification Tool</h2>
-<Variables />
-
-<DropZone
-	title="直接拖入固件 或者"
-	activeTitle="开始校验"
-	buttonTitle="点击选择固件"
-	fileLoadingTitle="正在校验"
-	fileTitle={fileName}
-	isLoading={isCalc}
-	on:drop={onDrop}
-	on:change={onChange}
-/>
-
-{#if selectFile}
-	<p>Name: {selectFile.name}</p>
-	<p>Size: {selectFile.size} Bytes</p>
-{/if}
-
-{#await sha1Value}
-	<p>sha-1: Calculating...</p>
-{:then sha1Value}
-	<p>sha-1: {sha1Value}</p>
-{/await}
+<FileDropzone name="files" regionInterfaceText="test" on:drop={onDrop} on:change={onChange}>
+	<svelte:fragment slot="message">点击选择固件<br />或者<br />直接拖入固件</svelte:fragment>
+	<svelte:fragment slot="meta">.hex .tenx .bin .zip</svelte:fragment>
+</FileDropzone>
+<FirmwareInfo {firmwareInfo} {warning} {sha1Value} />
