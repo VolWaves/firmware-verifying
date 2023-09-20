@@ -1,15 +1,38 @@
 <script>
 	import { fade, fly } from 'svelte/transition';
 	export let firmwareInfo = Array();
+	const dur = 200;
+	import { onMount } from 'svelte';
+
+	import { createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
+
+	let animationEndTimeout = 0;
+	$: isAnimationEnd = animationEndTimeout >= dur * 2;
+	onMount(() => {
+		let timer = setInterval(() => {
+			animationEndTimeout += 50;
+			if (isAnimationEnd) {
+				clearInterval(timer);
+				dispatch('message', {
+					isAnimationEnd
+				});
+			}
+		}, 50);
+	});
 </script>
 
 <div class="w-full mt-4 font-mono text-lg border-collapse text-slate-100">
-	{#each firmwareInfo as item}
+	{#each firmwareInfo as item, index}
 		{#if item.exist}
 			<div
-				transition:fade={{ duration: 300 }}
 				class:bg-red-700={item.valid != true}
 				class="overflow-hidden items flex flex-row mt-1 rounded-xl border-neutral-600 border-2"
+				in:fly|global={{ y: 50, duration: dur, delay: dur * 1.1 * index }}
+				out:fade|global={{ duration: dur }}
+				on:introend={() => {
+					animationEndTimeout = 0;
+				}}
 			>
 				<div
 					class:bg-neutral-700={item.valid == true}
