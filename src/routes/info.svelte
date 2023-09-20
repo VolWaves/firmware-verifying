@@ -62,7 +62,5 @@
 {/if}
 
 <style>
-	.fail {
-		background-color: darkred;
-	}
+
 </style>
