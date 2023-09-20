@@ -14,8 +14,7 @@
 
 {#if warning.valid}
 	<aside
-		transition:fade={{ duration: 300 }}
-		class="w-9/12 min-w-fit max-w-2xl alert {warning.style}"
+		class="alert {warning.style}"
 	>
 		<div class="alert-message">
 			<h3 class="h3">{warning.title}</h3>
