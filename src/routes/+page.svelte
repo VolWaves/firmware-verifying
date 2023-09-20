@@ -14,11 +14,10 @@
 	import Result from './result.svelte';
 	dayjs.extend(customParseFormat);
 	let sha1Value = '';
-	let firmwareFile = Object({ valid: false });
+	let firmwareFile = null;
 	let firmwareInfo = Array();
 	let fileTitle = '';
-	let fileError = '';
-	let warning = Object({ valid: false });
+	let alertContent = Object({ valid: false });
 	let isLoading = false;
 	let filenameParse = Object({ valid: false });
 	// @ts-ignore
@@ -41,46 +40,51 @@
 	}
 	// @ts-ignore
 	const onChange = (e) => {
-		firmwareFile.valid = false;
+		firmwareFile = Object();
 		filenameParse.valid = false;
-		fileError = '';
 		sha1Value = '';
 		console.log('onChange', e);
 		const file = e.dataTransfer ? e.dataTransfer.files[0] : e.target.files[0];
 		if (file == null) {
 			fileTitle = '无效输入';
-			fileError = '无效文件';
+			alertContent.title = '警告';
+			alertContent.text = '无效文件';
+			alertContent.style = 'variant-filled-warning';
+			alertContent.valid = true;
 			return;
 		}
 		if (file.size > 16777216) {
 			fileTitle = '无效输入';
-			fileError = '文件体积过大';
+			alertContent.title = '警告';
+			alertContent.text = '文件体积过大';
+			alertContent.style = 'variant-filled-warning';
+			alertContent.valid = true;
 			return;
 		}
 		firmwareFile = file;
 		firmwareFile.valid = true;
 		fileTitle = firmwareFile.name;
-		firmwareInfo = [{ name: '文件名', value: firmwareFile.name, exist: true, valid: true }];
+		firmwareInfo = [{ name: '文件名称', value: firmwareFile.name, exist: true, valid: true }];
 		firmwareInfo = [
 			...firmwareInfo,
-			{ name: '大小', value: firmwareFile.size + ' Bytes', exist: true, valid: true }
+			{ name: '文件大小', value: firmwareFile.size + ' Bytes', exist: true, valid: true }
 		];
 		// 解析文件名
 		const patt =
-			/^(\w+)-(\d{2})(\d{2})(\d{2})(\d{2})-\[([a-f0-9]{6})\]-(?:\{([a-f0-9]{4})\}-?)?([^\.]*)/i;
+			/^(\w+)-(\d{2})(\d{2})(\d{2})(\d{2})-\[([a-f0-9]{6})\](?:-\{([a-f0-9]{4})\})?-?([^\.]*)/i;
 		let match = fileTitle.match(patt);
 		if (match == null) {
-			warning.title = '警告';
-			warning.text = '文件名不符合Volwave固件规范，仅计算SHA-1校验和';
-			warning.style = 'variant-filled-warning';
-			warning.valid = true;
+			alertContent.title = '警告';
+			alertContent.text = '文件名不符合Volwave固件规范，仅计算SHA-1校验和';
+			alertContent.style = 'variant-filled-warning';
+			alertContent.valid = true;
 			firmwareInfo[0].valid = false;
 			filenameParse.valid = false;
 		} else {
-			warning.title = '状态';
-			warning.text = '正在解析中';
-			warning.style = 'variant-ghost-warning text-white';
-			warning.valid = true;
+			alertContent.title = '状态';
+			alertContent.text = '正在解析中';
+			alertContent.style = 'variant-ghost-warning text-white';
+			alertContent.valid = true;
 			filenameParse.name = match[1];
 			filenameParse.year = '20' + match[2];
 			filenameParse.month = match[3];
@@ -92,12 +96,12 @@
 			filenameParse.valid = true;
 			firmwareInfo = [
 				...firmwareInfo,
-				{ name: '项目', value: filenameParse.name, exist: true, valid: true }
+				{ name: '项目名称', value: filenameParse.name, exist: true, valid: true }
 			];
 			firmwareInfo = [
 				...firmwareInfo,
 				{
-					name: '日期',
+					name: '编译日期',
 					value: [
 						{ name: '年', value: filenameParse.year },
 						{ name: '月', value: filenameParse.month },
@@ -118,12 +122,12 @@
 			if (filenameParse.crc) {
 				firmwareInfo = [
 					...firmwareInfo,
-					{ name: '烧录器校验码', value: filenameParse.crc, exist: true, valid: true }
+					{ name: '烧录校验', value: filenameParse.crc, exist: true, valid: true }
 				];
 			}
 			firmwareInfo = [
 				...firmwareInfo,
-				{ name: '备注', value: filenameParse.info, exist: true, valid: true }
+				{ name: '备注信息', value: filenameParse.info, exist: true, valid: true }
 			];
 		}
 		// 若文件名不符合规范，则只进行sha-1计算
@@ -139,31 +143,55 @@
 	const reset = (e) => {
 		if (e.detail.reset) {
 			firmwareInfo = Array();
-			firmwareFile.valid = false;
+			firmwareFile = null;
+			alertContent.valid = false;
 			sha1Value = '';
 		}
 	};
 	const getResult = (e) => {
 		if (e.detail.isSha1Match) {
-			warning.title = '校验通过';
-			warning.text = 'SHA-1校验和与文件名中对应字段匹配';
-			warning.style = 'bg-green-600 text-white';
+			alertContent.title = '校验通过';
+			alertContent.text = 'SHA-1校验和与文件名中对应字段匹配';
+			alertContent.style = 'bg-green-600 text-white';
 		} else {
-			warning.title = '校验失败';
-			warning.text = 'SHA-1校验和与文件名中对应字段不匹配，固件损坏不可使用';
-			warning.style = 'bg-red-600 text-white';
+			alertContent.title = '校验失败';
+			alertContent.text = 'SHA-1校验和与文件名中对应字段不匹配，固件损坏不可使用';
+			alertContent.style = 'bg-red-600 text-white';
+		}
+	};
+	let alertVisible = 0;
+	let fileDropzoneVisible = 1;
+	let firmwareInfoVisible = 0;
+	let resultVisible = 0;
+	const animationEnd = (e) => {
+		if (e.detail.isAnimationEnd) {
+			firmwareInfoVisible = 2;
 		}
 	};
 </script>
 
 <div class="flex flex-col justify-center items-center mt-8">
 	<div class="w-9/12 flex-1 min-w-fit max-w-2xl text-slate-100">
-		{#if !firmwareFile.valid}
-			<div in:fade={{ duration: 300, delay: 400 }} out:fade={{ duration: 300 }}>
+		{#if alertContent.valid && fileDropzoneVisible == 0}
+			<div
+				transition:fade={{ duration: 300 }}
+				on:outroend={() => (alertVisible = 0)}
+				on:introstart={() => (alertVisible = 1)}
+				on:introend={() => (alertVisible = 2)}
+			>
+				<Alert on:message={reset} content={alertContent} />
+			</div>
+		{/if}
+		{#if !firmwareFile && alertVisible + resultVisible == 0}
+			<div
+				transition:fade={{ duration: 300 }}
+				on:outroend={() => (fileDropzoneVisible = 0)}
+				on:introstart={() => (fileDropzoneVisible = 1)}
+				on:introend={() => (fileDropzoneVisible = 2)}
+			>
 				<FileDropzone
 					class="bg-white/20 dragover:bg-red/20"
 					name="files"
-					regionInterfaceText="test"
 					slotMeta="opacity-50"
 					on:drop={onDrop}
 					on:change={onChange}
@@ -172,16 +200,18 @@
 					<svelte:fragment slot="meta">.hex .tenx .bin</svelte:fragment>
 				</FileDropzone>
 			</div>
-		{:else}
-			<div in:fade={{ duration: 300, delay: 300 }} out:fade={{ duration: 300 }}>
-				<Alert on:message={reset} {warning} />
-			</div>
-			<div in:fade={{ duration: 300, delay: 600 }} out:fade={{ duration: 300 }}>
-				<FirmwareInfo {firmwareInfo} />
-			</div>
-			<div in:fade={{ duration: 300, delay: 900 }} out:fade={{ duration: 300 }}>
-				<Result on:message={getResult} {sha1Value} {filenameParse} />
-			</div>
+		{:else if alertVisible == 2}
+			<FirmwareInfo {firmwareInfo} on:message={animationEnd} />
+			{#if firmwareInfoVisible == 2}
+				<div
+					transition:fade|global={{ duration: 300, delay: 100 }}
+					on:outroend={() => ((resultVisible = 0), (firmwareInfoVisible = 0))}
+					on:introstart={() => (resultVisible = 1)}
+					on:introend={() => (resultVisible = 2)}
+				>
+					<Result on:message={getResult} {sha1Value} {filenameParse} />
+				</div>
+			{/if}
 		{/if}
 	</div>
 </div>
