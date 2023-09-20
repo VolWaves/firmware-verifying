@@ -1,16 +1,13 @@
 <script>
 	import { fade, fly } from 'svelte/transition';
 	export let firmwareInfo = Array();
-	export let sha1Value = '';
 </script>
 
-<div
-	transition:fade={{ duration: 300 }}
-	class="w-full mt-4 font-mono text-lg border-collapse text-slate-100"
->
+<div class="w-full mt-4 font-mono text-lg border-collapse text-slate-100">
 	{#each firmwareInfo as item}
 		{#if item.exist}
 			<div
+				transition:fade={{ duration: 300 }}
 				class:bg-red-700={item.valid != true}
 				class="overflow-hidden items flex flex-row mt-1 rounded-xl border-neutral-600 border-2"
 			>

@@ -1,6 +1,6 @@
 <script>
 	import { FileDropzone } from '@skeletonlabs/skeleton';
-	import { fade, fly } from 'svelte/transition';
+	import { fade } from 'svelte/transition';
 	// @ts-ignore
 	import CryptoJS from 'crypto-js';
 	// @ts-ignore
@@ -157,25 +157,31 @@
 </script>
 
 <div class="flex flex-col justify-center items-center mt-8">
-	{#if !firmwareFile.valid}
-		<div transition:fade={{ duration: 300 }} class="w-9/12 min-w-fit max-w-2xl text-slate-100">
-			<FileDropzone
-				class="bg-white/20 dragover:bg-red/20"
-				name="files"
-				regionInterfaceText="test"
-				slotMeta="opacity-50"
-				on:drop={onDrop}
-				on:change={onChange}
-			>
-				<svelte:fragment slot="message">点击选择固件<br />或者<br />直接拖入固件</svelte:fragment>
-				<svelte:fragment slot="meta">.hex .tenx .bin</svelte:fragment>
-			</FileDropzone>
-		</div>
-	{:else}
-		<Alert on:message={reset} {warning} />
-	{/if}
-	<div class="w-9/12 min-w-fit max-w-2xl">
-		<FirmwareInfo {firmwareInfo} />
-		<Result on:message={getResult} {sha1Value} {filenameParse} />
+	<div class="w-9/12 flex-1 min-w-fit max-w-2xl text-slate-100">
+		{#if !firmwareFile.valid}
+			<div in:fade={{ duration: 300, delay: 400 }} out:fade={{ duration: 300 }}>
+				<FileDropzone
+					class="bg-white/20 dragover:bg-red/20"
+					name="files"
+					regionInterfaceText="test"
+					slotMeta="opacity-50"
+					on:drop={onDrop}
+					on:change={onChange}
+				>
+					<svelte:fragment slot="message">点击选择固件<br />或者<br />直接拖入固件</svelte:fragment>
+					<svelte:fragment slot="meta">.hex .tenx .bin</svelte:fragment>
+				</FileDropzone>
+			</div>
+		{:else}
+			<div in:fade={{ duration: 300, delay: 300 }} out:fade={{ duration: 300 }}>
+				<Alert on:message={reset} {warning} />
+			</div>
+			<div in:fade={{ duration: 300, delay: 600 }} out:fade={{ duration: 300 }}>
+				<FirmwareInfo {firmwareInfo} />
+			</div>
+			<div in:fade={{ duration: 300, delay: 900 }} out:fade={{ duration: 300 }}>
+				<Result on:message={getResult} {sha1Value} {filenameParse} />
+			</div>
+		{/if}
 	</div>
 </div>
