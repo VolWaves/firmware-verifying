@@ -1,5 +1,4 @@
 <script>
-	import { fade, fly } from 'svelte/transition';
 	import { afterUpdate } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -22,8 +21,7 @@
 
 {#if sha1Value != ''}
 	<div
-		transition:fade={{ duration: 300 }}
-		class="flex content-stretch justify-center items-center overflow-hidden font-mono font-bold text-lg mt-1 rounded-xl border-2 text-center p-4"
+		class="flex content-stretch justify-center items-center overflow-hidden font-mono font-bold text-lg mt-4 rounded-xl border-2 text-center p-4"
 		class:success={sha1Compare(sha1ToCompare, filenameParse.sha1)}
 		class:fail={!sha1Compare(sha1ToCompare, filenameParse.sha1)}
 	>
